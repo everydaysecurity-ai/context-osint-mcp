@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+"""Regenerate TOOLS.md from Context's MCP servers.
+
+Two sources, per server listed in scripts/servers.json:
+
+  * a saved `tools/list` result (the JSON fixtures under fixtures/tools-list/),
+    which is the default, and
+  * the live endpoint (--live), called with a bearer token read from the
+    environment variable the server names in servers.json (`token_env`).
+
+Only tools named in a server's `public_tools` list are written, to TOOLS.md
+and to the refreshed fixture alike. Anything else the endpoint returns is
+withheld and reported only as a count, so a tool that is not meant for the
+public never lands in this repository, its fixtures, or a CI log. A new
+public tool therefore needs one line in servers.json before it appears.
+
+Python 3.9+, standard library only.
+
+Examples:
+  scripts/gen-tools                         # render TOOLS.md from fixtures
+  scripts/gen-tools --check                 # exit 1 if TOOLS.md is stale
+  scripts/gen-tools --from-json mcp=tools.json
+  CONTEXT_MCP_TOKEN=... scripts/gen-tools --live --update-fixtures
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG = ROOT / "scripts" / "servers.json"
+OUTPUT = ROOT / "TOOLS.md"
+PROTOCOL_VERSION = "2025-06-18"
+USER_AGENT = "context-osint-mcp/gen-tools"
+
+
+# --------------------------------------------------------------------------
+# Fetching
+# --------------------------------------------------------------------------
+
+class FetchError(Exception):
+    pass
+
+
+def _parse_body(raw: bytes, content_type: str, want_id: int | None) -> dict | None:
+    """Return the JSON-RPC message in a response, JSON or server-sent events."""
+    text = raw.decode("utf-8", errors="replace").strip()
+    if not text:
+        return None
+    if "text/event-stream" in content_type:
+        messages, data = [], []
+        for line in text.splitlines() + [""]:
+            if line.startswith("data:"):
+                data.append(line[5:].lstrip())
+            elif line == "" and data:
+                messages.append(json.loads("\n".join(data)))
+                data = []
+        for msg in messages:
+            if want_id is None or msg.get("id") == want_id:
+                return msg
+        return None
+    return json.loads(text)
+
+
+def _post(url: str, token: str, payload: dict, session: str | None) -> tuple[dict | None, str | None]:
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+        "Authorization": f"Bearer {token}",
+        "MCP-Protocol-Version": PROTOCOL_VERSION,
+        "User-Agent": USER_AGENT,
+    }
+    if session:
+        headers["Mcp-Session-Id"] = session
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            body = resp.read()
+            session = resp.headers.get("Mcp-Session-Id") or session
+            msg = _parse_body(body, resp.headers.get("Content-Type", ""), payload.get("id"))
+    except urllib.error.HTTPError as e:
+        # Never echo the response body: it is not ours to publish in a CI log.
+        raise FetchError(f"{url} answered HTTP {e.code}") from None
+    except urllib.error.URLError as e:
+        raise FetchError(f"{url} unreachable: {e.reason}") from None
+    if msg and "error" in msg:
+        raise FetchError(f"{url} returned a JSON-RPC error: {msg['error'].get('message', 'unknown')}")
+    return msg, session
+
+
+def fetch_tools(url: str, token: str) -> list[dict]:
+    init = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": PROTOCOL_VERSION,
+            "capabilities": {},
+            "clientInfo": {"name": USER_AGENT, "version": "1"},
+        },
+    }
+    _, session = _post(url, token, init, None)
+    _post(url, token, {"jsonrpc": "2.0", "method": "notifications/initialized"}, session)
+
+    tools, cursor, req_id = [], None, 2
+    while True:
+        params = {"cursor": cursor} if cursor else {}
+        msg, session = _post(url, token, {"jsonrpc": "2.0", "id": req_id, "method": "tools/list", "params": params}, session)
+        if not msg or "result" not in msg:
+            raise FetchError(f"{url} gave no tools/list result")
+        tools.extend(msg["result"].get("tools", []))
+        cursor = msg["result"].get("nextCursor")
+        req_id += 1
+        if not cursor:
+            return tools
+
+
+# --------------------------------------------------------------------------
+# Rendering
+# --------------------------------------------------------------------------
+
+def _cell(text: str) -> str:
+    return " ".join(str(text).split()).replace("|", "\\|")
+
+
+def _type_of(schema: dict) -> str:
+    t = schema.get("type", "")
+    if isinstance(t, list):
+        t = " or ".join(x for x in t if x != "null") or "null"
+    if t == "array" and isinstance(schema.get("items"), dict):
+        return f"array of {_type_of(schema['items'])}"
+    return t or "any"
+
+
+def _first_sentence(text: str) -> str:
+    text = " ".join(text.split())
+    end = text.find(". ")
+    return text if end == -1 else text[: end + 1]
+
+
+def render_tool(tool: dict) -> str:
+    out = [f"### `{tool['name']}`", "", " ".join(tool.get("description", "").split()), ""]
+
+    ann = tool.get("annotations") or {}
+    hints = [label for key, label in (
+        ("readOnlyHint", "read-only"),
+        ("destructiveHint", "destructive"),
+        ("idempotentHint", "idempotent"),
+        ("openWorldHint", "open-world"),
+    ) if ann.get(key)]
+    if hints:
+        out += [f"Annotations: {', '.join(hints)}", ""]
+
+    schema = tool.get("inputSchema") or {}
+    props = schema.get("properties") or {}
+    required = set(schema.get("required") or [])
+    if props:
+        out += ["| Argument | Type | Required | Description |", "|---|---|---|---|"]
+        for name in sorted(props, key=lambda n: (n not in required, n)):
+            p = props[name]
+            out.append(f"| `{name}` | {_cell(_type_of(p))} | {'yes' if name in required else 'no'} | {_cell(p.get('description', ''))} |")
+        out.append("")
+    else:
+        out += ["Takes no arguments.", ""]
+
+    oprops = (tool.get("outputSchema") or {}).get("properties") or {}
+    if oprops:
+        out += ["Returns structured content with: " + ", ".join(f"`{k}`" for k in sorted(oprops)) + ".", ""]
+    return "\n".join(out)
+
+
+def render(servers: list[dict], tools_by_server: dict[str, list[dict]]) -> str:
+    out = [
+        "# Tools",
+        "",
+        "<!-- Generated by scripts/gen-tools. Do not edit by hand: run the script. -->",
+        "",
+        "This file is generated from each server's `tools/list` answer. A scheduled job regenerates it and",
+        "opens a pull request when the tool list changes, so it tracks what the servers actually expose.",
+        "",
+    ]
+    for srv in servers:
+        tools = sorted(tools_by_server[srv["id"]], key=lambda t: t["name"])
+        out += [
+            f"## {srv['title']}",
+            "",
+            f"Endpoint: `{srv['url']}`",
+            "",
+            f"Authentication: {srv['auth']}",
+            "",
+            "| Tool | Summary |",
+            "|---|---|",
+        ]
+        out += [f"| [`{t['name']}`](#{t['name']}) | {_cell(_first_sentence(t.get('description', '')))} |" for t in tools]
+        out.append("")
+        out += [render_tool(t) for t in tools]
+    return "\n".join(out).rstrip() + "\n"
+
+
+# --------------------------------------------------------------------------
+# Main
+# --------------------------------------------------------------------------
+
+def public_only(srv: dict, tools: list[dict]) -> list[dict]:
+    allowed = set(srv["public_tools"])
+    kept = [t for t in tools if t.get("name") in allowed]
+    withheld = len(tools) - len(kept)
+    if withheld:
+        print(f"{srv['id']}: withheld {withheld} tool(s) not on the public list in scripts/servers.json", file=sys.stderr)
+    missing = allowed - {t["name"] for t in kept}
+    if missing:
+        print(f"{srv['id']}: public tool(s) no longer listed by the server: {', '.join(sorted(missing))}", file=sys.stderr)
+    return kept
+
+
+def load_json_tools(path: Path) -> list[dict]:
+    data = json.loads(path.read_text())
+    if isinstance(data, dict) and "result" in data:  # a raw JSON-RPC response
+        data = data["result"]
+    return data["tools"] if isinstance(data, dict) else data
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--live", action="store_true", help="call tools/list on each live endpoint")
+    ap.add_argument("--allow-missing-token", action="store_true",
+                    help="with --live, fall back to the fixture for a server whose token variable is unset")
+    ap.add_argument("--from-json", action="append", default=[], metavar="SERVER_ID=PATH",
+                    help="render one server from a saved tools/list JSON file instead of its fixture")
+    ap.add_argument("--update-fixtures", action="store_true", help="write what was read back to the fixtures")
+    ap.add_argument("--check", action="store_true", help="do not write; exit 1 if TOOLS.md would change")
+    ap.add_argument("-o", "--output", default=str(OUTPUT), help="output path (default: TOOLS.md)")
+    args = ap.parse_args()
+
+    servers = json.loads(CONFIG.read_text())["servers"]
+    overrides = {}
+    for item in args.from_json:
+        sid, _, path = item.partition("=")
+        if not path:
+            ap.error(f"--from-json expects SERVER_ID=PATH, got {item!r}")
+        overrides[sid] = Path(path)
+    unknown = set(overrides) - {s["id"] for s in servers}
+    if unknown:
+        ap.error(f"unknown server id(s): {', '.join(sorted(unknown))}")
+
+    tools_by_server = {}
+    for srv in servers:
+        token = os.environ.get(srv["token_env"], "")
+        if srv["id"] in overrides:
+            tools = load_json_tools(overrides[srv["id"]])
+        elif args.live and token:
+            try:
+                tools = fetch_tools(srv["url"], token)
+            except FetchError as e:
+                print(f"{srv['id']}: {e}", file=sys.stderr)
+                return 2
+        elif args.live and not args.allow_missing_token:
+            print(f"{srv['id']}: {srv['token_env']} is not set", file=sys.stderr)
+            return 2
+        else:
+            if args.live:
+                print(f"{srv['id']}: {srv['token_env']} is not set; using the saved fixture", file=sys.stderr)
+            tools = load_json_tools(ROOT / srv["fixture"])
+        tools_by_server[srv["id"]] = public_only(srv, tools)
+
+    rendered = render(servers, tools_by_server)
+    out = Path(args.output)
+    if args.check:
+        current = out.read_text() if out.exists() else ""
+        if current != rendered:
+            print(f"{out.name} is out of date; run scripts/gen-tools", file=sys.stderr)
+            return 1
+        return 0
+
+    out.write_text(rendered)
+    if args.update_fixtures:
+        for srv in servers:
+            fixture = ROOT / srv["fixture"]
+            tools = sorted(tools_by_server[srv["id"]], key=lambda t: t["name"])
+            fixture.write_text(json.dumps({"tools": tools}, indent=2, sort_keys=True) + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,1324 @@
+{
+  "tools": [
+    {
+      "description": "Submit a URL to the honeypot crawler and return the crawl job id. Crawling is performed by isolated honeypot infrastructure, never from this service. Returns immediately with a job id; poll get_crawl for status and results.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "intent": {
+            "description": "one of 'user-waiting' (the default) or 'background'; controls the crawler's admission priority tier",
+            "type": "string"
+          },
+          "reason": {
+            "description": "free-text audit note describing why this crawl was requested",
+            "type": "string"
+          },
+          "url": {
+            "description": "the URL to crawl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "name": "enqueue_crawl",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "deduped": {
+            "type": "boolean"
+          },
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "deduped"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Look up one crawl job by id: its status, seed URL, failure reason, risk assessment, analysis projection, and an index of the evidence artifacts it produced. The artifact index lists evidence types and keys only \u2014 call get_crawl_artifact to read an artifact's contents.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "description": "the crawl job id returned by enqueue_crawl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      },
+      "name": "get_crawl",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis": {
+            "description": "the crawler's opaque analysis projection, forwarded whole and not modelled by this service"
+          },
+          "artifacts": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "evidence_type": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "pi_id": {
+                  "description": "the crawler device identity whose phone produced this artifact",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "evidence_type",
+                "key"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "failure_reason": {
+            "type": "string"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "risk": {
+            "additionalProperties": false,
+            "properties": {
+              "band": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "number"
+              },
+              "ruleset_version": {
+                "type": "string"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "top_contributors": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "evidence_refs": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "feature": {
+                      "type": "string"
+                    },
+                    "points": {
+                      "type": "integer"
+                    },
+                    "why": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "feature",
+                    "points",
+                    "why",
+                    "evidence_refs"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "null",
+                  "array"
+                ]
+              }
+            },
+            "required": [
+              "score",
+              "band",
+              "top_contributors"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "seed_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "seed_url",
+          "artifacts"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Fetch the contents of one evidence artifact from a crawl job. Text artifacts (dom, console, network, cdp-status) are returned inline as text, truncated past 256KB with a note. Binary artifacts (screenshot, har) are returned as an embedded resource, or \u2014 past 2MB \u2014 as a type/size summary only. This tool never returns a downloadable link; contents are fetched server-side.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_type": {
+            "description": "one of dom, console, network, cdp-status, screenshot, har",
+            "type": "string"
+          },
+          "job_id": {
+            "description": "the crawl job id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "evidence_type"
+        ],
+        "type": "object"
+      },
+      "name": "get_crawl_artifact"
+    },
+    {
+      "description": "Look up everything Context knows about one indicator: when it was first and last seen, how often, its tags and sources, the attributes observed on it (registration, hosting, capture, verdict), where it has been seen, and the related indicators it connects to. Reads existing evidence only \u2014 it never crawls, and never queues one. Use enqueue_crawl when the answer is that nothing is known yet.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "description": "optional indicator type (url, domain, ip, email, phone, business, person, address, organization); inferred from value when omitted",
+            "type": "string"
+          },
+          "value": {
+            "description": "the indicator to look up - a URL, domain, IP, email, phone, company name or registration number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
+      "name": "get_fact",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "attrs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "first_seen": {
+            "type": "string"
+          },
+          "is_primary_target": {
+            "type": "boolean"
+          },
+          "last_seen": {
+            "type": "string"
+          },
+          "observation_count": {
+            "type": "integer"
+          },
+          "occurrences": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "attrs": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "first_seen_at": {
+                  "type": "string"
+                },
+                "investigation_id": {
+                  "type": "string"
+                },
+                "investigation_title": {
+                  "type": "string"
+                },
+                "node_id": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "seen_at": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tags": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "type": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "value",
+                "investigation_id",
+                "investigation_title"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "related": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "attrs": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "cohost": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "at_least": {
+                      "type": "boolean"
+                    },
+                    "known": {
+                      "type": "integer"
+                    },
+                    "lookup_failed": {
+                      "type": "boolean"
+                    },
+                    "names": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "shared": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "known"
+                  ],
+                  "type": [
+                    "null",
+                    "object"
+                  ]
+                },
+                "confidence": {
+                  "type": "number"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "last_seen": {
+                  "type": "string"
+                },
+                "outbound": {
+                  "type": "boolean"
+                },
+                "prior": {
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "verified": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "related_lookup_failed": {
+            "type": "boolean"
+          },
+          "related_truncated": {
+            "type": "boolean"
+          },
+          "related_verified_shown": {
+            "type": "integer"
+          },
+          "related_verified_total": {
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "value",
+          "observation_count",
+          "is_primary_target",
+          "tags",
+          "sources",
+          "attrs",
+          "occurrences",
+          "related"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Read one investigation: whether its autonomous run has finished, the verdict it reached (with the evidence it rests on), every earlier verdict, and its most recent timeline steps.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "investigation_id": {
+            "description": "the investigation id returned by start_investigation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "investigation_id"
+        ],
+        "type": "object"
+      },
+      "name": "get_investigation",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "description": "true once the run has finished, however it finished; poll get_investigation until then",
+            "type": "boolean"
+          },
+          "edges": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string"
+          },
+          "investigation_id": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "integer"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "path": {
+            "description": "where the investigation opens in Context's web app",
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "seed_type": {
+            "type": "string"
+          },
+          "seed_value": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "status": {
+            "description": "the autonomous run's status: queued, running, complete, blocked or failed",
+            "type": "string"
+          },
+          "timeline": {
+            "description": "the most recent timeline events, oldest first",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "time": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "time",
+                "action"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "verdict": {
+            "additionalProperties": false,
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "string"
+              },
+              "decided_at": {
+                "type": "string"
+              },
+              "rests_on": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "node_id": {
+                      "type": "string"
+                    },
+                    "node_label": {
+                      "type": "string"
+                    },
+                    "node_type": {
+                      "type": "string"
+                    },
+                    "observed_at": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "strength": {
+                      "type": "string"
+                    },
+                    "what": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "strength",
+                    "source",
+                    "node_type",
+                    "node_label",
+                    "what"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "null",
+                  "array"
+                ]
+              },
+              "run_id": {
+                "type": "string"
+              },
+              "taxonomy_version": {
+                "type": "integer"
+              },
+              "withheld": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "category",
+              "confidence",
+              "taxonomy_version",
+              "decided_at"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "verdict_history": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "string"
+                },
+                "decided_at": {
+                  "type": "string"
+                },
+                "rests_on": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "category": {
+                        "type": "string"
+                      },
+                      "node_id": {
+                        "type": "string"
+                      },
+                      "node_label": {
+                        "type": "string"
+                      },
+                      "node_type": {
+                        "type": "string"
+                      },
+                      "observed_at": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "strength": {
+                        "type": "string"
+                      },
+                      "what": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "category",
+                      "strength",
+                      "source",
+                      "node_type",
+                      "node_label",
+                      "what"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "run_id": {
+                  "type": "string"
+                },
+                "taxonomy_version": {
+                  "type": "integer"
+                },
+                "withheld": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "category",
+                "confidence",
+                "taxonomy_version",
+                "decided_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "investigation_id",
+          "title",
+          "path",
+          "done",
+          "verdict_history",
+          "nodes",
+          "edges",
+          "timeline"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Read one note you sent to the Context team by its ref (send_feedback returns it), and what came of it. Only your own notes can be read.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "feedback_id": {
+            "description": "the note's ref, as send_feedback or list_my_feedback returned it",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedback_id"
+        ],
+        "type": "object"
+      },
+      "name": "get_my_feedback",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "type": "string"
+              },
+              "id": {
+                "description": "the note's ref; pass it to get_my_feedback",
+                "type": "string"
+              },
+              "page_label": {
+                "description": "where it was sent from",
+                "type": "string"
+              },
+              "problems": {
+                "description": "what the team logged from this note and where each stands",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "can_answer": {
+                      "description": "true while Context is asking whether the fix worked; answer in the web app",
+                      "type": "boolean"
+                    },
+                    "closed_reason": {
+                      "description": "why the team decided not to fix it",
+                      "type": "string"
+                    },
+                    "comment": {
+                      "description": "the user's own comment that the fix did not work",
+                      "type": "string"
+                    },
+                    "fix": {
+                      "additionalProperties": false,
+                      "description": "the fix we shipped, when there is one",
+                      "properties": {
+                        "date": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "what changed, in the words shown in the app",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "date",
+                        "message"
+                      ],
+                      "type": [
+                        "null",
+                        "object"
+                      ]
+                    },
+                    "since": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "description": "logged, in_progress, fixed, confirmed, still_broken or closed",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "can_answer"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "null",
+                  "array"
+                ]
+              },
+              "status": {
+                "description": "acknowledged (a thumbs-up), received (nobody has logged it yet), or the status of the problem logged from it",
+                "type": "string"
+              },
+              "subject": {
+                "description": "the record or investigation it was about",
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "text": {
+                "description": "what the user sent",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "created_at",
+              "text",
+              "status",
+              "problems"
+            ],
+            "type": "object"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "note",
+          "path"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "List the feedback you have sent to the Context team, newest first, and what came of each note: whether it was logged as a problem, is being worked on, was fixed (with what changed), or was closed and why. The same as Your feedback in Context's web app. Shows only your own feedback.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "name": "list_my_feedback",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "feedback": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "created_at": {
+                  "type": "string"
+                },
+                "id": {
+                  "description": "the note's ref; pass it to get_my_feedback",
+                  "type": "string"
+                },
+                "page_label": {
+                  "description": "where it was sent from",
+                  "type": "string"
+                },
+                "problems": {
+                  "description": "what the team logged from this note and where each stands",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "can_answer": {
+                        "description": "true while Context is asking whether the fix worked; answer in the web app",
+                        "type": "boolean"
+                      },
+                      "closed_reason": {
+                        "description": "why the team decided not to fix it",
+                        "type": "string"
+                      },
+                      "comment": {
+                        "description": "the user's own comment that the fix did not work",
+                        "type": "string"
+                      },
+                      "fix": {
+                        "additionalProperties": false,
+                        "description": "the fix we shipped, when there is one",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "description": "what changed, in the words shown in the app",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "message"
+                        ],
+                        "type": [
+                          "null",
+                          "object"
+                        ]
+                      },
+                      "since": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "description": "logged, in_progress, fixed, confirmed, still_broken or closed",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "can_answer"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "status": {
+                  "description": "acknowledged (a thumbs-up), received (nobody has logged it yet), or the status of the problem logged from it",
+                  "type": "string"
+                },
+                "subject": {
+                  "description": "the record or investigation it was about",
+                  "type": "string"
+                },
+                "tag": {
+                  "type": "string"
+                },
+                "text": {
+                  "description": "what the user sent",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "created_at",
+                "text",
+                "status",
+                "problems"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "path": {
+            "description": "the same list in Context's web app",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedback",
+          "path"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the state business-registration records by counts and fields rather than by one name: addresses by how many businesses are registered there, people by how many businesses they govern or are agent for, businesses by agent, governor, address and formation date. Returns the structured search the question was read as (check its summary) and the matching records, whose labels open in Context. Counts cover only the records Context holds; result.corpus says how many.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "question": {
+            "description": "a question about state business registrations, e.g. 'addresses in WA with 2 to 9 businesses at their own office', 'people who govern 3 or more businesses', 'businesses registered by Northwest Registered Agent in September 2026'",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "type": "object"
+      },
+      "name": "search_business_records",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "parsed_by": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "tool": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "tool",
+              "args",
+              "summary",
+              "parsed_by"
+            ],
+            "type": "object"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "query",
+          "result"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Send feedback to the Context team: the same as the feedback panel in Context's web app. Call it ONLY when the user asks you to send feedback, and send what they said in their words. Never call it on your own initiative, and never to report a failed tool call. When the user says something works well, send it with positive true (a thumbs-up; words optional): it is acknowledged on arrival, with nothing to fix. Name the indicator or investigation the feedback is about when there is one, so the team can see what the user saw. The user can follow what comes of it under Your feedback in Context.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "indicator": {
+            "description": "optional: the URL, domain, IP or other indicator the feedback is about",
+            "type": "string"
+          },
+          "indicator_type": {
+            "description": "optional type of indicator (url, domain, ip, ...); used only when Context cannot infer it from the value",
+            "type": "string"
+          },
+          "investigation_id": {
+            "description": "optional: the investigation the feedback is about, instead of an indicator",
+            "type": "string"
+          },
+          "message": {
+            "description": "the feedback, in the user's own words; optional only with positive",
+            "type": "string"
+          },
+          "positive": {
+            "description": "true for a thumbs-up: the user is saying something works well. Takes no tag; the message is optional",
+            "type": "boolean"
+          },
+          "tag": {
+            "description": "optional: one of Wrong verdict, Missing data, Confusing, Too slow",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "send_feedback",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "the note's ref",
+            "type": "string"
+          },
+          "path": {
+            "description": "where the user can follow what comes of it in Context's web app",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Start an autonomous investigation of a URL, domain or IP \u2014 the same as pressing \"Autonomously investigate\" in Context. It crawls the target through isolated honeypot infrastructure, follows its leads, and reaches a verdict. Re-running an indicator you have investigated before continues your existing investigation rather than opening a second one. Returns immediately; poll get_investigation until done is true.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "noise": {
+            "description": "optional ceiling on how loud the investigation may be: passive, fetch or crawl (the default)",
+            "type": "string"
+          },
+          "type": {
+            "description": "optional type (url, domain, ip, business, address, person, organization); inferred from value when omitted, which works only for url, domain and ip",
+            "type": "string"
+          },
+          "value": {
+            "description": "the indicator to investigate: a URL, domain or IP address, or a state business registry record (a business, address, person or organization label exactly as Context shows it)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
+      "name": "start_investigation",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "description": "true once the run has finished, however it finished; poll get_investigation until then",
+            "type": "boolean"
+          },
+          "edges": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string"
+          },
+          "investigation_id": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "integer"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "path": {
+            "description": "where the investigation opens in Context's web app",
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "seed_type": {
+            "type": "string"
+          },
+          "seed_value": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "status": {
+            "description": "the autonomous run's status: queued, running, complete, blocked or failed",
+            "type": "string"
+          },
+          "timeline": {
+            "description": "the most recent timeline events, oldest first",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "time": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "time",
+                "action"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "verdict": {
+            "additionalProperties": false,
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "string"
+              },
+              "decided_at": {
+                "type": "string"
+              },
+              "rests_on": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "node_id": {
+                      "type": "string"
+                    },
+                    "node_label": {
+                      "type": "string"
+                    },
+                    "node_type": {
+                      "type": "string"
+                    },
+                    "observed_at": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "strength": {
+                      "type": "string"
+                    },
+                    "what": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "strength",
+                    "source",
+                    "node_type",
+                    "node_label",
+                    "what"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "null",
+                  "array"
+                ]
+              },
+              "run_id": {
+                "type": "string"
+              },
+              "taxonomy_version": {
+                "type": "integer"
+              },
+              "withheld": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "category",
+              "confidence",
+              "taxonomy_version",
+              "decided_at"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "verdict_history": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "string"
+                },
+                "decided_at": {
+                  "type": "string"
+                },
+                "rests_on": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "category": {
+                        "type": "string"
+                      },
+                      "node_id": {
+                        "type": "string"
+                      },
+                      "node_label": {
+                        "type": "string"
+                      },
+                      "node_type": {
+                        "type": "string"
+                      },
+                      "observed_at": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "strength": {
+                        "type": "string"
+                      },
+                      "what": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "category",
+                      "strength",
+                      "source",
+                      "node_type",
+                      "node_label",
+                      "what"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "run_id": {
+                  "type": "string"
+                },
+                "taxonomy_version": {
+                  "type": "integer"
+                },
+                "withheld": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "category",
+                "confidence",
+                "taxonomy_version",
+                "decided_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "investigation_id",
+          "title",
+          "path",
+          "done",
+          "verdict_history",
+          "nodes",
+          "edges",
+          "timeline"
+        ],
+        "type": "object"
+      }
+    }
+  ]
+}

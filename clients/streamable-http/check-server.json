@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "context-check": {
+      "type": "http",
+      "url": "https://context.everydaysecurity.ai/api/mcp/check",
+      "headers": {
+        "Authorization": "Bearer ctx_live_YOUR_AGENT_KEY"
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "servers": [
+    {
+      "id": "mcp",
+      "title": "Investigation server",
+      "url": "https://context.everydaysecurity.ai/api/mcp",
+      "auth": "Browser sign-in (OAuth) in Claude Code and VS Code; an API key header in other clients.",
+      "token_env": "CONTEXT_MCP_TOKEN",
+      "fixture": "fixtures/tools-list/mcp.json",
+      "public_tools": [
+        "enqueue_crawl",
+        "get_crawl",
+        "get_crawl_artifact",
+        "get_fact",
+        "get_investigation",
+        "get_my_feedback",
+        "list_my_feedback",
+        "search_business_records",
+        "send_feedback",
+        "start_investigation"
+      ]
+    },
+    {
+      "id": "mcp-check",
+      "title": "Scam check server",
+      "url": "https://context.everydaysecurity.ai/api/mcp/check",
+      "auth": "An agent key (made in Context under Integrations, then Agents), sent as a bearer token.",
+      "token_env": "CONTEXT_CHECK_TOKEN",
+      "fixture": "fixtures/tools-list/mcp-check.json",
+      "public_tools": [
+        "check_scam",
+        "get_check"
+      ]
+    }
+  ]
+}

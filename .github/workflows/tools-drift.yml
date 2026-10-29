@@ -1,0 +1,69 @@
+# Regenerates TOOLS.md from the live servers and opens a pull request when the
+# tool list has changed.
+#
+# SECRETS (not configured yet; until they are, this job finds no drift and
+# exits cleanly):
+#   CONTEXT_CHECK_TOKEN  an agent key for the scam check server. Agent keys can
+#                        run checks and nothing else, so this is the low-risk one.
+#   CONTEXT_MCP_TOKEN    a credential for the investigation server. Not decided
+#                        yet: an agent key cannot reach that endpoint, and browser
+#                        sign-in tokens expire. Leave it unset until the
+#                        maintainers settle which read-only credential to use.
+# A server whose secret is unset keeps its saved fixture, so the job never
+# deletes tools it simply could not see.
+#
+# Only tools listed in scripts/servers.json are ever written. The script reports
+# anything else as a bare count, so nothing outside that list reaches the repo or
+# this public log.
+
+name: Tools drift
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: tools-drift
+  cancel-in-progress: false
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Regenerate TOOLS.md from the live servers
+        env:
+          CONTEXT_MCP_TOKEN: ${{ secrets.CONTEXT_MCP_TOKEN }}
+          CONTEXT_CHECK_TOKEN: ${{ secrets.CONTEXT_CHECK_TOKEN }}
+        run: python3 -I scripts/gen-tools --live --allow-missing-token --update-fixtures
+
+      - name: Open a pull request if anything changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- TOOLS.md fixtures/; then
+            echo "No drift."
+            exit 0
+          fi
+          # One standing branch: a later run updates the open PR instead of
+          # opening another one.
+          branch="tools-drift"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add TOOLS.md fixtures/
+          git commit -m "tools: regenerate TOOLS.md from the live tool list"
+          git push --force origin "$branch"
+          if gh pr list --head "$branch" --state open --json number --jq 'length' | grep -q '^0$'; then
+            gh pr create --head "$branch" --base main \
+              --title "tools: the live tool list changed" \
+              --body "The scheduled tools-drift job found that the live \`tools/list\` answer no longer matches TOOLS.md. Review the diff, and re-run any example in \`examples/\` whose tools changed before merging."
+          fi

@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "context": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://context.everydaysecurity.ai/api/mcp",
+        "--header",
+        "X-API-Key:${CONTEXT_API_KEY}"
+      ],
+      "env": {
+        "CONTEXT_API_KEY": "ctx_live_YOUR_KEY"
+      }
+    }
+  }
+}

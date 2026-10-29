@@ -1,0 +1,42 @@
+# Checks every change: TOOLS.md must match the saved fixtures, and server.json
+# must be well formed. Needs no secrets.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: TOOLS.md is up to date with the fixtures
+        run: python3 -I scripts/gen-tools --check
+
+      - name: server.json is well formed
+        run: |
+          python3 -I - <<'EOF'
+          import json, re, sys
+          s = json.load(open("server.json"))
+          errors = []
+          if not re.fullmatch(r"[a-zA-Z0-9.-]+/[a-zA-Z0-9._-]+", s.get("name", "")):
+              errors.append("name does not match the registry's pattern")
+          if not 1 <= len(s.get("description", "")) <= 100:
+              errors.append("description must be 1-100 characters")
+          if not s.get("version"):
+              errors.append("version is required")
+          for r in s.get("remotes", []):
+              if r.get("type") != "streamable-http" or not r.get("url", "").startswith("https://"):
+                  errors.append(f"remote {r} is not an https streamable-http remote")
+          if errors:
+              sys.exit("\n".join(errors))
+          print("server.json OK")
+          EOF

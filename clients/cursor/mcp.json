@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "context": {
+      "url": "https://context.everydaysecurity.ai/api/mcp",
+      "headers": {
+        "X-API-Key": "ctx_live_YOUR_KEY"
+      }
+    }
+  }
+}

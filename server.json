@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "ai.everydaysecurity/context",
+  "title": "Context",
+  "description": "OSINT investigations with traceable evidence: domains, URLs, IPs, scams and business records.",
+  "version": "1.0.0",
+  "websiteUrl": "https://everydaysecurity.ai/",
+  "repository": {
+    "url": "https://github.com/everydaysecurity-ai/context-osint-mcp",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://context.everydaysecurity.ai/api/mcp",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "description": "Only for clients that cannot do browser sign-in (for example Cursor). Claude Code and VS Code sign in with OAuth and need no key.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

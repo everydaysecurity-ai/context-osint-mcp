@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "context": {
+      "type": "http",
+      "url": "https://context.everydaysecurity.ai/api/mcp"
+    }
+  }
+}
