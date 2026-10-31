@@ -5,6 +5,14 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 [TOOLS.md](TOOLS.md) is regenerated from the servers' own `tools/list` answers whenever their tools change.
 
+## 2026-10-31
+
+### Changed
+
+- A request with no credentials to `/api/mcp` or `/api/mcp/check` still gets `401` with the same sign-in pointer, but
+  the body now says where to sign up and what the server needs, as both a JSON error (`account_required`, with
+  `sign_up_url`) and a JSON-RPC error. Requests that send a key or token are answered as before.
+
 ## 2026-10-29
 
 ### Added

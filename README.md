@@ -44,6 +44,10 @@ with a message telling you where to accept. Once you accept, run the call again.
 A small number of sign-ups, for example from disposable email addresses, are checked by a person first, and the
 message says so.
 
+If a request reaches a server with no credentials at all, it still answers `401` with the same sign-in pointer, and
+the body now also says where to sign up and what the server needs (an account for the investigation server, an agent
+key for the scam check server).
+
 ## Quick start
 
 With Claude Code:
