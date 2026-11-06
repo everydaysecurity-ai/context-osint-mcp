@@ -15,6 +15,7 @@
         "get_investigation",
         "get_my_feedback",
         "list_my_feedback",
+        "request_feature",
         "search_business_records",
         "send_feedback",
         "start_investigation"

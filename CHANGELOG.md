@@ -5,6 +5,14 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 [TOOLS.md](TOOLS.md) is regenerated from the servers' own `tools/list` answers whenever their tools change.
 
+## 2026-11-06
+
+### Added
+
+- `request_feature` on the investigation server (`/api/mcp`): ask the Context team for a capability Context does not
+  have yet, with a title, the problem in your words and optional supporting documentation. The request appears under
+  Your feedback in Context, where you can follow what comes of it. The server now has 11 tools.
+
 ## 2026-10-31
 
 ### Changed
