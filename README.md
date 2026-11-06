@@ -124,6 +124,7 @@ The complete reference, generated from the servers' own `tools/list`, is in [TOO
 | `search_business_records` | Ask questions about state business registrations by counts and fields, for example agents with many registrations or addresses shared by many businesses. |
 | `check_scam` / `get_check` | A block, caution or allow answer for a URL, domain, IP, email or phone, with its reasons. |
 | `send_feedback` / `list_my_feedback` / `get_my_feedback` | Tell the team what's wrong or missing, and follow what happens to it. |
+| `request_feature` | Ask the team for a capability Context doesn't have yet, with an API sketch or spec if you have one. |
 
 ## Repository layout
 

@@ -20,6 +20,7 @@ Authentication: Browser sign-in (OAuth) in Claude Code and VS Code; an API key h
 | [`get_investigation`](#get_investigation) | Read one investigation: whether its autonomous run has finished, the verdict it reached (with the evidence it rests on), every earlier verdict, and its most recent timeline steps. |
 | [`get_my_feedback`](#get_my_feedback) | Read one note you sent to the Context team by its ref (send_feedback returns it), and what came of it. |
 | [`list_my_feedback`](#list_my_feedback) | List the feedback you have sent to the Context team, newest first, and what came of each note: whether it was logged as a problem, is being worked on, was fixed (with what changed), or was closed and why. |
+| [`request_feature`](#request_feature) | Ask the Context team for a capability Context does not have yet, with supporting documentation. |
 | [`search_business_records`](#search_business_records) | Search the state business-registration records by counts and fields rather than by one name: addresses by how many businesses are registered there, people by how many businesses they govern or are agent for, businesses by agent, governor, address and formation date. |
 | [`send_feedback`](#send_feedback) | Send feedback to the Context team: the same as the feedback panel in Context's web app. |
 | [`start_investigation`](#start_investigation) | Start an autonomous investigation of a URL, domain or IP — the same as pressing "Autonomously investigate" in Context. |
@@ -93,6 +94,19 @@ List the feedback you have sent to the Context team, newest first, and what came
 Takes no arguments.
 
 Returns structured content with: `feedback`, `path`.
+
+### `request_feature`
+
+Ask the Context team for a capability Context does not have yet, with supporting documentation. Call it ONLY when the user asks you to request a feature, or agrees when you suggest it after finding that Context cannot do what they need. Describe the problem in the user's words. Put any detail — the API shape you need, example payloads, a spec — in documentation. Never call it to report a bug or a wrong result: that is send_feedback. A person reads every request and decides on it; nothing is built automatically, and the user can follow the decision under Your feedback in Context.
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `problem` | string | yes | what the user is trying to do and cannot, in their words |
+| `title` | string | yes | the capability, in one line, e.g. Export a list as STIX 2.1 |
+| `documentation` | string | no | optional supporting documentation in markdown: an API sketch, example requests and responses, a spec or the relevant part of one. Up to 50,000 characters. Links are kept as text and never opened |
+| `proposal` | string | no | optional: how they would like it to work |
+
+Returns structured content with: `id`, `path`.
 
 ### `search_business_records`
 

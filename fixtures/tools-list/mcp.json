@@ -944,6 +944,54 @@
       }
     },
     {
+      "description": "Ask the Context team for a capability Context does not have yet, with supporting documentation. Call it ONLY when the user asks you to request a feature, or agrees when you suggest it after finding that Context cannot do what they need. Describe the problem in the user's words. Put any detail \u2014 the API shape you need, example payloads, a spec \u2014 in documentation. Never call it to report a bug or a wrong result: that is send_feedback. A person reads every request and decides on it; nothing is built automatically, and the user can follow the decision under Your feedback in Context.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "documentation": {
+            "description": "optional supporting documentation in markdown: an API sketch, example requests and responses, a spec or the relevant part of one. Up to 50,000 characters. Links are kept as text and never opened",
+            "type": "string"
+          },
+          "problem": {
+            "description": "what the user is trying to do and cannot, in their words",
+            "type": "string"
+          },
+          "proposal": {
+            "description": "optional: how they would like it to work",
+            "type": "string"
+          },
+          "title": {
+            "description": "the capability, in one line, e.g. Export a list as STIX 2.1",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "problem"
+        ],
+        "type": "object"
+      },
+      "name": "request_feature",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "the request's ref",
+            "type": "string"
+          },
+          "path": {
+            "description": "where the user can follow what comes of it in Context's web app",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path"
+        ],
+        "type": "object"
+      }
+    },
+    {
       "description": "Search the state business-registration records by counts and fields rather than by one name: addresses by how many businesses are registered there, people by how many businesses they govern or are agent for, businesses by agent, governor, address and formation date. Returns the structured search the question was read as (check its summary) and the matching records, whose labels open in Context. Counts cover only the records Context holds; result.corpus says how many.",
       "inputSchema": {
         "additionalProperties": false,
