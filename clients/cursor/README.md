@@ -9,5 +9,5 @@ request. Use the form on Context's **MCP Setup** page once you've accepted the l
 
 Don't commit a project-level `.cursor/mcp.json` that contains a real key.
 
-For the scam check server, use the URL `https://context.everydaysecurity.ai/api/mcp/check` and the header
+For the scam check server, use the URL `https://api.everydaysecurity.ai/mcp/check` and the header
 `"Authorization": "Bearer ctx_live_YOUR_AGENT_KEY"`, with an agent key from **Integrations → Agents**.

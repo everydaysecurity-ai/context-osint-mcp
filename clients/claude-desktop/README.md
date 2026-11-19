@@ -14,5 +14,5 @@ The key goes in `env` and reaches the header through `${CONTEXT_API_KEY}`, so th
 command line. `mcp-remote` is maintained outside Everyday Security, and we have not tested this exact setup
 end to end. If it doesn't connect, tell us through the feedback form in Context.
 
-For the scam check server, use the same pattern with `https://context.everydaysecurity.ai/api/mcp/check` and
+For the scam check server, use the same pattern with `https://api.everydaysecurity.ai/mcp/check` and
 `--header` `Authorization:Bearer ${CONTEXT_AGENT_KEY}`, using an agent key from **Integrations → Agents**.

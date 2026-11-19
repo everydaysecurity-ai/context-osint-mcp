@@ -15,7 +15,7 @@ Add `--scope user` to make it available in every project, or `--scope project` t
 ## Scam check server (agent key)
 
 ```bash
-claude mcp add --transport http context-check https://context.everydaysecurity.ai/api/mcp/check \
+claude mcp add --transport http context-check https://api.everydaysecurity.ai/mcp/check \
   --header "Authorization: Bearer ctx_live_YOUR_AGENT_KEY"
 ```
 

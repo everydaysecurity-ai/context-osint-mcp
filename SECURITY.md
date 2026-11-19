@@ -9,7 +9,7 @@ your report and keep you informed as we fix it.
 ## Scope
 
 - The hosted MCP endpoints `https://context.everydaysecurity.ai/api/mcp` and
-  `https://context.everydaysecurity.ai/api/mcp/check`, and the Context web app they belong to.
+  `https://api.everydaysecurity.ai/mcp/check`, and the Context web app they belong to.
 - The contents of this repository, including `scripts/gen-tools` and the GitHub workflows.
 
 Please don't test against indicators or accounts that aren't yours, and don't run automated scans that degrade

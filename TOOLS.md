@@ -147,7 +147,7 @@ Returns structured content with: `done`, `edges`, `error`, `finished_at`, `inves
 
 ## Scam check server
 
-Endpoint: `https://context.everydaysecurity.ai/api/mcp/check`
+Endpoint: `https://api.everydaysecurity.ai/mcp/check`
 
 Authentication: An agent key (made in Context under Integrations, then Agents), sent as a bearer token.
 
