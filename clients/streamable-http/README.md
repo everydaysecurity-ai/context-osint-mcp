@@ -4,7 +4,7 @@ Any MCP client that can send a header can connect.
 
 | | Investigation server | Scam check server |
 |---|---|---|
-| URL | `https://context.everydaysecurity.ai/api/mcp` | `https://context.everydaysecurity.ai/api/mcp/check` |
+| URL | `https://context.everydaysecurity.ai/api/mcp` | `https://api.everydaysecurity.ai/mcp/check` |
 | Transport | streamable HTTP | streamable HTTP |
 | Header | `X-API-Key: ctx_live_YOUR_KEY` or `Authorization: Bearer ctx_live_YOUR_KEY` | `Authorization: Bearer ctx_live_YOUR_AGENT_KEY` (or `X-API-Key`) |
 | Key from | the request form on Context's **MCP Setup** page | **Integrations → Agents** in Context |

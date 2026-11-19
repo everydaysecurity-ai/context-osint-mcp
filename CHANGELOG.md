@@ -5,6 +5,15 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 [TOOLS.md](TOOLS.md) is regenerated from the servers' own `tools/list` answers whenever their tools change.
 
+## 2026-11-18
+
+### Changed
+
+- The scam check server now has a home at `https://api.everydaysecurity.ai/mcp/check`, and the checks REST API at
+  `https://api.everydaysecurity.ai/v1/checks`. The setup guides and configs here use the new address. The old
+  `https://context.everydaysecurity.ai/api/mcp/check` address keeps working, so existing setups need no change. The
+  investigation server stays at `https://context.everydaysecurity.ai/api/mcp`.
+
 ## 2026-11-06
 
 ### Added

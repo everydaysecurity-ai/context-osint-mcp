@@ -65,7 +65,7 @@ Configs for VS Code, Cursor, Claude Desktop and generic clients are in [clients/
 | Endpoint | Tools | Authentication |
 |---|---|---|
 | `https://context.everydaysecurity.ai/api/mcp` | Investigation tools (10) | Browser sign-in in Claude Code and VS Code. An API key header elsewhere (keys issued on request, see [clients/](clients/)). |
-| `https://context.everydaysecurity.ai/api/mcp/check` | `check_scam`, `get_check` | An agent key you make in Context |
+| `https://api.everydaysecurity.ai/mcp/check` | `check_scam`, `get_check` | An agent key you make in Context |
 
 ## What you can look up
 

@@ -24,7 +24,7 @@
     {
       "id": "mcp-check",
       "title": "Scam check server",
-      "url": "https://context.everydaysecurity.ai/api/mcp/check",
+      "url": "https://api.everydaysecurity.ai/mcp/check",
       "auth": "An agent key (made in Context under Integrations, then Agents), sent as a bearer token.",
       "token_env": "CONTEXT_CHECK_TOKEN",
       "fixture": "fixtures/tools-list/mcp-check.json",
